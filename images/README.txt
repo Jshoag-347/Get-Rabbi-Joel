@@ -1,2 +1,1 @@
-nginx
 images folder
