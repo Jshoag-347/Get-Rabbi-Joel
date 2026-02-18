@@ -1,10 +1,10 @@
-<!-- file: 2048.html -->
+<!-- file: index.html -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>2048 (Class Edition)</title>
+  <title>2048 Classroom Project</title>
   <style>
     :root { --gap: 12px; --size: 92px; --radius: 14px; }
     * { box-sizing: border-box; }
@@ -19,8 +19,7 @@
     .scores { display: flex; gap: 10px; }
     .badge {
       background: #bbada0; color: #f9f6f2; padding: 10px 12px; border-radius: 10px;
-      min-width: 92px; text-align: center;
-      user-select: none;
+      min-width: 92px; text-align: center; user-select: none;
     }
     .badge .label { font-size: 12px; opacity: 0.9; }
     .badge .val { font-size: 22px; font-weight: 700; margin-top: 2px; }
@@ -32,6 +31,7 @@
       cursor: pointer;
     }
     button:active { transform: translateY(1px); }
+
     .board {
       position: relative;
       background: #bbada0; border-radius: var(--radius);
@@ -63,10 +63,13 @@
       border-radius: 12px;
       display: grid; place-items: center;
       font-weight: 800;
-      color: #776e65;
-      font-size: 34px;
       transform: scale(1);
       animation: pop 120ms ease-out;
+
+      /* image tile rules */
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
     @keyframes pop { from { transform: scale(0.88);} to { transform: scale(1);} }
 
@@ -90,21 +93,6 @@
     .panel h2 { margin: 0 0 8px; font-size: 28px; }
     .panel p { margin: 0 0 12px; font-size: 14px; }
     .panel .row { display: flex; justify-content: center; gap: 10px; }
-
-    /* Tile colors (simple + readable) */
-    .v2    { background:#eee4da; }
-    .v4    { background:#ede0c8; }
-    .v8    { background:#f2b179; color:#f9f6f2; }
-    .v16   { background:#f59563; color:#f9f6f2; }
-    .v32   { background:#f67c5f; color:#f9f6f2; }
-    .v64   { background:#f65e3b; color:#f9f6f2; }
-    .v128  { background:#edcf72; color:#f9f6f2; font-size:30px; }
-    .v256  { background:#edcc61; color:#f9f6f2; font-size:30px; }
-    .v512  { background:#edc850; color:#f9f6f2; font-size:30px; }
-    .v1024 { background:#edc53f; color:#f9f6f2; font-size:26px; }
-    .v2048 { background:#edc22e; color:#f9f6f2; font-size:26px; }
-    .v4096 { background:#3c3a32; color:#f9f6f2; font-size:26px; }
-    .v8192 { background:#3c3a32; color:#f9f6f2; font-size:26px; }
 
     @media (max-width: 420px) {
       :root { --gap: 10px; --size: 76px; }
@@ -151,13 +139,30 @@
 
 <script>
 /**
- * 2048 (single-file)
- * - Deterministic core logic (pure-ish helpers)
- * - UI render separated from move logic
+ * 2048 (image tiles)
+ * Put your images in: /images/<value>.png
  */
 
 const SIZE = 4;
 const BEST_KEY = "bestScore_2048_class";
+
+/* Your requested mapping:
+   512=first, 1024=second, 256=third, 64=fourth, 128=fifth,
+   32=sixth, 2048=seventh, 2=eighth, 4=ninth, 16=tenth, 8=eleventh
+*/
+const TILE_IMAGES = {
+  2: "images/2.jpg",
+  4: "images/4.jpg",
+  8: "images/8.jpg",
+  16: "images/16.jpg",
+  32: "images/32.jpg",
+  64: "images/64.jpg",
+  128: "images/128.jpg",
+  256: "images/256.jpg",
+  512: "images/512.jpg",
+  1024: "images/1024.jpg",
+  2048: "images/2048.jpg",
+};
 
 const els = {
   score: document.getElementById("score"),
@@ -180,8 +185,6 @@ let gameOver = false;
 initBackground();
 resetGame();
 
-/* ---------- Setup ---------- */
-
 function initBackground() {
   els.bg.innerHTML = "";
   for (let i = 0; i < SIZE * SIZE; i++) {
@@ -202,8 +205,6 @@ function resetGame() {
 
   render();
 }
-
-/* ---------- Grid helpers ---------- */
 
 function makeEmptyGrid() {
   return Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
@@ -260,8 +261,6 @@ function anyMovesLeft(g) {
   }
   return false;
 }
-
-/* ---------- Move core ---------- */
 
 function slideAndMergeLine(line) {
   const nonZero = line.filter(v => v !== 0);
@@ -329,8 +328,6 @@ function move(direction) {
   }
 }
 
-/* ---------- Render ---------- */
-
 function render() {
   els.score.textContent = String(score);
   els.best.textContent = String(best);
@@ -343,11 +340,18 @@ function render() {
       if (v === 0) continue;
 
       const tile = document.createElement("div");
-      tile.className = `tile v${Math.min(v, 8192)}`;
-      tile.textContent = String(v);
-
+      tile.className = "tile";
       tile.style.gridRowStart = String(r + 1);
       tile.style.gridColumnStart = String(c + 1);
+
+      const img = TILE_IMAGES[v];
+      if (img) {
+        tile.style.backgroundImage = `url("${img}")`;
+        tile.textContent = "";
+        tile.setAttribute("aria-label", String(v));
+      } else {
+        tile.textContent = String(v);
+      }
 
       els.tiles.appendChild(tile);
     }
@@ -363,8 +367,6 @@ function showOverlay(title, msg) {
 function hideOverlay() {
   els.overlay.classList.remove("show");
 }
-
-/* ---------- Input ---------- */
 
 document.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
@@ -387,7 +389,6 @@ document.addEventListener("keydown", (e) => {
 els.restart.addEventListener("click", resetGame);
 els.tryAgain.addEventListener("click", resetGame);
 
-/* Touch swipe */
 let touchStart = null;
 
 els.board.addEventListener("touchstart", (e) => {
