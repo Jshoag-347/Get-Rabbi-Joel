@@ -5,41 +5,88 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>2048 Classroom Project</title>
+
   <style>
     :root { --gap: 12px; --size: 92px; --radius: 14px; }
+
     * { box-sizing: border-box; }
+
     body {
-      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: #faf8ef; color: #776e65;
-      display: flex; justify-content: center; padding: 24px;
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #faf8ef;
+      color: #776e65;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
     }
+
     .wrap { width: min(420px, 100%); }
-    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-    h1 { margin: 0; font-size: 56px; line-height: 1; letter-spacing: -1px; color: #776e65; }
-    .scores { display: flex; gap: 10px; }
-    .badge {
-      background: #bbada0; color: #f9f6f2; padding: 10px 12px; border-radius: 10px;
-      min-width: 92px; text-align: center; user-select: none;
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
     }
+
+    h1 {
+      margin: 0;
+      font-size: 56px;
+      line-height: 1;
+      letter-spacing: -1px;
+      color: #776e65;
+    }
+
+    .scores { display: flex; gap: 10px; }
+
+    .badge {
+      background: #bbada0;
+      color: #f9f6f2;
+      padding: 10px 12px;
+      border-radius: 10px;
+      min-width: 92px;
+      text-align: center;
+      user-select: none;
+    }
+
     .badge .label { font-size: 12px; opacity: 0.9; }
     .badge .val { font-size: 22px; font-weight: 700; margin-top: 2px; }
-    .sub { margin: 14px 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px;}
+
+    .sub {
+      margin: 14px 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
     .hint { font-size: 14px; color: #776e65; }
+
     button {
-      border: 0; background: #8f7a66; color: #f9f6f2;
-      padding: 10px 12px; border-radius: 10px; font-weight: 700;
+      border: 0;
+      background: #8f7a66;
+      color: #f9f6f2;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 700;
       cursor: pointer;
     }
+
     button:active { transform: translateY(1px); }
 
     .board {
       position: relative;
-      background: #bbada0; border-radius: var(--radius);
+      background: #bbada0;
+      border-radius: var(--radius);
       padding: var(--gap);
       touch-action: none;
       user-select: none;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      overflow: hidden;
     }
+
+    /* Background grid */
     .grid {
       display: grid;
       grid-template-columns: repeat(4, var(--size));
@@ -47,42 +94,60 @@
       gap: var(--gap);
       justify-content: center;
     }
+
     .cell {
       background: rgba(238,228,218,0.35);
       border-radius: 12px;
     }
+
+    /* Foreground tile layer: absolute positioning for smooth transforms */
     .tile-layer {
-      position: absolute; inset: var(--gap);
-      display: grid;
-      grid-template-columns: repeat(4, var(--size));
-      grid-template-rows: repeat(4, var(--size));
-      gap: var(--gap);
+      position: absolute;
+      inset: var(--gap);
       pointer-events: none;
     }
-    .tile {
-      border-radius: 12px;
-      display: grid; place-items: center;
-      font-weight: 800;
-      transform: scale(1);
-      animation: pop 120ms ease-out;
 
-      /* image tile rules */
+    .tile {
+      position: absolute;
+      width: var(--size);
+      height: var(--size);
+      border-radius: 12px;
+
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+
+      /* Slide animation */
+      transition: transform 120ms ease-in-out;
+
+      /* If image fails, we show fallback number */
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      color: #776e65;
+      font-size: 32px;
+      background-color: #eee4da;
     }
-    @keyframes pop { from { transform: scale(0.88);} to { transform: scale(1);} }
+
+    .tile.is-new { animation: pop 140ms ease-out; }
+    .tile.is-merged { animation: pop 140ms ease-out; }
+
+    @keyframes pop { from { transform: scale(0.88) var(--move, translate(0px, 0px)); } to { transform: scale(1) var(--move, translate(0px, 0px)); } }
 
     .overlay {
-      position: absolute; inset: 0;
+      position: absolute;
+      inset: 0;
       display: none;
-      align-items: center; justify-content: center;
+      align-items: center;
+      justify-content: center;
       background: rgba(238,228,218,0.73);
       border-radius: var(--radius);
       text-align: center;
       padding: 20px;
     }
+
     .overlay.show { display: flex; }
+
     .panel {
       background: rgba(255,255,255,0.85);
       padding: 18px 16px;
@@ -90,6 +155,7 @@
       box-shadow: 0 8px 24px rgba(0,0,0,0.10);
       max-width: 320px;
     }
+
     .panel h2 { margin: 0 0 8px; font-size: 28px; }
     .panel p { margin: 0 0 12px; font-size: 14px; }
     .panel .row { display: flex; justify-content: center; gap: 10px; }
@@ -100,6 +166,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <header>
@@ -139,31 +206,19 @@
 
 <script>
 /**
- * 2048 (image tiles)
- * Put your images in: /images/<value>.png
+ * 2048 with image tiles + simple slide animation.
+ *
+ * Images:
+ *   Put files in /images and name them by value:
+ *     images/2.jpg (or .png/.jpeg), images/4.jpg, ... images/2048.jpg
+ *
+ * The renderer tries png -> jpg -> jpeg automatically.
  */
 
 const SIZE = 4;
 const BEST_KEY = "bestScore_2048_class";
 
-/* Your requested mapping:
-   512=first, 1024=second, 256=third, 64=fourth, 128=fifth,
-   32=sixth, 2048=seventh, 2=eighth, 4=ninth, 16=tenth, 8=eleventh
-*/
-const TILE_IMAGES = {
-  2: "images/2.jpg",
-  4: "images/4.jpg",
-  8: "images/8.jpg",
-  16: "images/16.jpg",
-  32: "images/32.jpg",
-  64: "images/64.jpg",
-  128: "images/128.jpg",
-  256: "images/256.jpg",
-  512: "images/512.jpg",
-  1024: "images/1024.jpg",
-  2048: "images/2048.jpg",
-};
-
+/* ---------- DOM ---------- */
 const els = {
   score: document.getElementById("score"),
   best: document.getElementById("best"),
@@ -177,41 +232,25 @@ const els = {
   overMsg: document.getElementById("overMsg"),
 };
 
-let grid = makeEmptyGrid();
+/* ---------- State ---------- */
 let score = 0;
 let best = loadBest();
 let gameOver = false;
 
+let nextTileId = 1;
+/** @type {(null|{id:number,value:number,flags:{isNew:boolean,isMerged:boolean}})[][]} */
+let grid = makeEmptyGrid();
+
+/** @type {Map<number, HTMLDivElement>} */
+const tileEls = new Map();
+
+/* ---------- Init ---------- */
 initBackground();
 resetGame();
 
-function initBackground() {
-  els.bg.innerHTML = "";
-  for (let i = 0; i < SIZE * SIZE; i++) {
-    const d = document.createElement("div");
-    d.className = "cell";
-    els.bg.appendChild(d);
-  }
-}
-
-function resetGame() {
-  grid = makeEmptyGrid();
-  score = 0;
-  gameOver = false;
-  hideOverlay();
-
-  spawnRandomTile(grid);
-  spawnRandomTile(grid);
-
-  render();
-}
-
+/* ---------- Helpers ---------- */
 function makeEmptyGrid() {
-  return Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-}
-
-function cloneGrid(g) {
-  return g.map(row => row.slice());
+  return Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
 }
 
 function loadBest() {
@@ -223,95 +262,217 @@ function saveBest(v) {
   localStorage.setItem(BEST_KEY, String(v));
 }
 
+function initBackground() {
+  els.bg.innerHTML = "";
+  for (let i = 0; i < SIZE * SIZE; i++) {
+    const d = document.createElement("div");
+    d.className = "cell";
+    els.bg.appendChild(d);
+  }
+}
+
 function emptyCells(g) {
   const out = [];
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
-      if (g[r][c] === 0) out.push([r, c]);
+      if (!g[r][c]) out.push([r, c]);
     }
   }
   return out;
 }
 
-function spawnRandomTile(g) {
-  const empties = emptyCells(g);
-  if (empties.length === 0) return false;
-  const [r, c] = empties[Math.floor(Math.random() * empties.length)];
-  g[r][c] = Math.random() < 0.9 ? 2 : 4;
-  return true;
-}
-
-function gridsEqual(a, b) {
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (a[r][c] !== b[r][c]) return false;
-    }
-  }
-  return true;
-}
-
 function anyMovesLeft(g) {
   if (emptyCells(g).length > 0) return true;
+
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
-      const v = g[r][c];
-      if (r + 1 < SIZE && g[r + 1][c] === v) return true;
-      if (c + 1 < SIZE && g[r][c + 1] === v) return true;
+      const t = g[r][c];
+      if (!t) continue;
+      const v = t.value;
+      const right = c + 1 < SIZE ? g[r][c + 1] : null;
+      const down  = r + 1 < SIZE ? g[r + 1][c] : null;
+      if (right && right.value === v) return true;
+      if (down && down.value === v) return true;
     }
   }
   return false;
 }
 
-function slideAndMergeLine(line) {
-  const nonZero = line.filter(v => v !== 0);
-  const merged = [];
+function spawnRandomTile(g) {
+  const empties = emptyCells(g);
+  if (empties.length === 0) return false;
+
+  const [r, c] = empties[Math.floor(Math.random() * empties.length)];
+  const value = Math.random() < 0.9 ? 2 : 4;
+
+  g[r][c] = {
+    id: nextTileId++,
+    value,
+    flags: { isNew: true, isMerged: false },
+  };
+  return true;
+}
+
+/* ---------- Movement core (tile objects keep stable ids) ---------- */
+function slideAndMergeLine(tiles) {
+  const filtered = tiles.filter(Boolean);
+
+  /** @type {(null|{id:number,value:number,flags:{isNew:boolean,isMerged:boolean}})[]} */
+  const out = [];
   let gained = 0;
 
-  for (let i = 0; i < nonZero.length; i++) {
-    const cur = nonZero[i];
-    const next = nonZero[i + 1];
-    if (next !== undefined && cur === next) {
-      const nv = cur * 2;
-      merged.push(nv);
-      gained += nv;
+  for (let i = 0; i < filtered.length; i++) {
+    const cur = filtered[i];
+    const next = filtered[i + 1];
+
+    if (next && cur.value === next.value) {
+      const mergedValue = cur.value * 2;
+      gained += mergedValue;
+
+      out.push({
+        id: nextTileId++,
+        value: mergedValue,
+        flags: { isNew: false, isMerged: true },
+      });
       i++;
     } else {
-      merged.push(cur);
+      cur.flags.isNew = false;
+      cur.flags.isMerged = false;
+      out.push(cur);
     }
   }
 
-  while (merged.length < SIZE) merged.push(0);
-  return { line: merged, gained };
+  while (out.length < SIZE) out.push(null);
+  return { line: out, gained };
 }
 
+function resetGame() {
+  score = 0;
+  gameOver = false;
+  hideOverlay();
+
+  grid = makeEmptyGrid();
+  tileEls.forEach(el => el.remove());
+  tileEls.clear();
+
+  spawnRandomTile(grid);
+  spawnRandomTile(grid);
+
+  render();
+}
+
+/* ---------- Render (with slide animation via transforms) ---------- */
+function getLayout() {
+  const root = getComputedStyle(document.documentElement);
+  const size = Number.parseFloat(root.getPropertyValue("--size")) || 92;
+  const gap = Number.parseFloat(root.getPropertyValue("--gap")) || 12;
+  return { size, gap, step: size + gap };
+}
+
+function tileBackgroundForValue(v) {
+  const base = `images/${v}`;
+  // Tries PNG, then JPG, then JPEG automatically.
+  return `url("${base}.png"), url("${base}.jpg"), url("${base}.jpeg")`;
+}
+
+function render() {
+  els.score.textContent = String(score);
+  els.best.textContent = String(best);
+
+  const { step } = getLayout();
+
+  /** @type {Set<number>} */
+  const seenIds = new Set();
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const t = grid[r][c];
+      if (!t) continue;
+
+      seenIds.add(t.id);
+
+      let el = tileEls.get(t.id);
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "tile";
+        el.dataset.id = String(t.id);
+        els.tiles.appendChild(el);
+        tileEls.set(t.id, el);
+      }
+
+      // Apply image background (with fallback chain)
+      el.style.backgroundImage = tileBackgroundForValue(t.value);
+
+      // Fallback number if image missing (browser will show background-color)
+      el.textContent = "";
+
+      // Mark animations
+      el.classList.toggle("is-new", !!t.flags.isNew);
+      el.classList.toggle("is-merged", !!t.flags.isMerged);
+
+      // Move animation via transform
+      const x = c * step;
+      const y = r * step;
+      el.style.transform = `translate(${x}px, ${y}px)`;
+
+      el.setAttribute("aria-label", String(t.value));
+
+      // Clear flags after render so it only pops once
+      t.flags.isNew = false;
+      t.flags.isMerged = false;
+    }
+  }
+
+  // Remove tiles no longer present
+  for (const [id, el] of tileEls.entries()) {
+    if (seenIds.has(id)) continue;
+    el.remove();
+    tileEls.delete(id);
+  }
+}
+
+/* ---------- Move wrapper ---------- */
 function move(direction) {
   if (gameOver) return;
 
-  const before = cloneGrid(grid);
+  const beforeScore = score;
+
+  // Snapshot to detect changes
+  const before = grid.map(row => row.map(t => (t ? t.value : 0)).join(",")).join("|");
+
   let gainedTotal = 0;
+  const newGrid = makeEmptyGrid();
 
   if (direction === "left" || direction === "right") {
     for (let r = 0; r < SIZE; r++) {
       const row = grid[r].slice();
       const working = direction === "right" ? row.reverse() : row;
+
       const { line, gained } = slideAndMergeLine(working);
       gainedTotal += gained;
+
       const out = direction === "right" ? line.reverse() : line;
-      grid[r] = out;
+      newGrid[r] = out;
     }
   } else {
     for (let c = 0; c < SIZE; c++) {
       const col = [];
       for (let r = 0; r < SIZE; r++) col.push(grid[r][c]);
+
       const working = direction === "down" ? col.reverse() : col;
+
       const { line, gained } = slideAndMergeLine(working);
       gainedTotal += gained;
+
       const out = direction === "down" ? line.reverse() : line;
-      for (let r = 0; r < SIZE; r++) grid[r][c] = out[r];
+      for (let r = 0; r < SIZE; r++) newGrid[r][c] = out[r];
     }
   }
 
-  if (gridsEqual(before, grid)) return;
+  const after = newGrid.map(row => row.map(t => (t ? t.value : 0)).join(",")).join("|");
+  if (before === after && gainedTotal === 0 && beforeScore === score) return;
+
+  grid = newGrid;
 
   score += gainedTotal;
   if (score > best) {
@@ -328,36 +489,7 @@ function move(direction) {
   }
 }
 
-function render() {
-  els.score.textContent = String(score);
-  els.best.textContent = String(best);
-
-  els.tiles.innerHTML = "";
-
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      const v = grid[r][c];
-      if (v === 0) continue;
-
-      const tile = document.createElement("div");
-      tile.className = "tile";
-      tile.style.gridRowStart = String(r + 1);
-      tile.style.gridColumnStart = String(c + 1);
-
-      const img = TILE_IMAGES[v];
-      if (img) {
-        tile.style.backgroundImage = `url("${img}")`;
-        tile.textContent = "";
-        tile.setAttribute("aria-label", String(v));
-      } else {
-        tile.textContent = String(v);
-      }
-
-      els.tiles.appendChild(tile);
-    }
-  }
-}
-
+/* ---------- Overlay ---------- */
 function showOverlay(title, msg) {
   els.overTitle.textContent = title;
   els.overMsg.textContent = msg;
@@ -368,17 +500,14 @@ function hideOverlay() {
   els.overlay.classList.remove("show");
 }
 
+/* ---------- Input ---------- */
 document.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
   const map = {
-    arrowleft: "left",
-    a: "left",
-    arrowright: "right",
-    d: "right",
-    arrowup: "up",
-    w: "up",
-    arrowdown: "down",
-    s: "down",
+    arrowleft: "left", a: "left",
+    arrowright: "right", d: "right",
+    arrowup: "up", w: "up",
+    arrowdown: "down", s: "down",
   };
   const dir = map[key];
   if (!dir) return;
@@ -389,6 +518,7 @@ document.addEventListener("keydown", (e) => {
 els.restart.addEventListener("click", resetGame);
 els.tryAgain.addEventListener("click", resetGame);
 
+/* Touch swipe */
 let touchStart = null;
 
 els.board.addEventListener("touchstart", (e) => {
