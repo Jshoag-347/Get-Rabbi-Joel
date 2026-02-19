@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>2048 Classroom Project</title>
+  <title>Get Rabbi Joel</title>
 
   <style>
     :root { --gap: 12px; --size: 92px; --radius: 14px; }
@@ -86,7 +86,6 @@
       overflow: hidden;
     }
 
-    /* Background grid */
     .grid {
       display: grid;
       grid-template-columns: repeat(4, var(--size));
@@ -100,7 +99,6 @@
       border-radius: 12px;
     }
 
-    /* Foreground tile layer: absolute positioning for smooth transforms */
     .tile-layer {
       position: absolute;
       inset: var(--gap);
@@ -117,22 +115,30 @@
       background-position: center;
       background-repeat: no-repeat;
 
-      /* Slide animation */
-      transition: transform 120ms ease-in-out;
-
-      /* If image fails, we show fallback number */
       display: grid;
       place-items: center;
       font-weight: 800;
       color: #776e65;
       font-size: 32px;
       background-color: #eee4da;
+
+      /* Position via CSS variables so pop animation never overwrites translate */
+      --tx: 0px;
+      --ty: 0px;
+      transform: translate(var(--tx), var(--ty));
+
+      /* Slide animation */
+      transition: transform 120ms ease-in-out;
+      will-change: transform;
     }
 
     .tile.is-new { animation: pop 140ms ease-out; }
     .tile.is-merged { animation: pop 140ms ease-out; }
 
-    @keyframes pop { from { transform: scale(0.88) var(--move, translate(0px, 0px)); } to { transform: scale(1) var(--move, translate(0px, 0px)); } }
+    @keyframes pop {
+      from { transform: translate(var(--tx), var(--ty)) scale(0.88); }
+      to   { transform: translate(var(--tx), var(--ty)) scale(1); }
+    }
 
     .overlay {
       position: absolute;
@@ -144,6 +150,7 @@
       border-radius: var(--radius);
       text-align: center;
       padding: 20px;
+      pointer-events: auto;
     }
 
     .overlay.show { display: flex; }
@@ -154,6 +161,7 @@
       border-radius: 14px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.10);
       max-width: 320px;
+      pointer-events: auto;
     }
 
     .panel h2 { margin: 0 0 8px; font-size: 28px; }
@@ -206,7 +214,7 @@
 
 <script>
 /**
- * 2048 with image tiles + simple slide animation.
+ * 2048 with image tiles + smooth slide animation (no transform conflicts).
  *
  * Images:
  *   Put files in /images and name them by value:
@@ -236,6 +244,7 @@ const els = {
 let score = 0;
 let best = loadBest();
 let gameOver = false;
+let hasWon = false;
 
 let nextTileId = 1;
 /** @type {(null|{id:number,value:number,flags:{isNew:boolean,isMerged:boolean}})[][]} */
@@ -298,6 +307,16 @@ function anyMovesLeft(g) {
   return false;
 }
 
+function hasValueOnBoard(g, value) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const t = g[r][c];
+      if (t && t.value === value) return true;
+    }
+  }
+  return false;
+}
+
 function spawnRandomTile(g) {
   const empties = emptyCells(g);
   if (empties.length === 0) return false;
@@ -349,6 +368,7 @@ function slideAndMergeLine(tiles) {
 function resetGame() {
   score = 0;
   gameOver = false;
+  hasWon = false;
   hideOverlay();
 
   grid = makeEmptyGrid();
@@ -361,17 +381,16 @@ function resetGame() {
   render();
 }
 
-/* ---------- Render (with slide animation via transforms) ---------- */
+/* ---------- Render (smooth slide via CSS vars) ---------- */
 function getLayout() {
   const root = getComputedStyle(document.documentElement);
   const size = Number.parseFloat(root.getPropertyValue("--size")) || 92;
   const gap = Number.parseFloat(root.getPropertyValue("--gap")) || 12;
-  return { size, gap, step: size + gap };
+  return { step: size + gap };
 }
 
 function tileBackgroundForValue(v) {
   const base = `images/${v}`;
-  // Tries PNG, then JPG, then JPEG automatically.
   return `url("${base}.png"), url("${base}.jpg"), url("${base}.jpeg")`;
 }
 
@@ -380,8 +399,6 @@ function render() {
   els.best.textContent = String(best);
 
   const { step } = getLayout();
-
-  /** @type {Set<number>} */
   const seenIds = new Set();
 
   for (let r = 0; r < SIZE; r++) {
@@ -400,30 +417,26 @@ function render() {
         tileEls.set(t.id, el);
       }
 
-      // Apply image background (with fallback chain)
       el.style.backgroundImage = tileBackgroundForValue(t.value);
+      el.textContent = ""; // images-only
 
-      // Fallback number if image missing (browser will show background-color)
-      el.textContent = "";
-
-      // Mark animations
       el.classList.toggle("is-new", !!t.flags.isNew);
       el.classList.toggle("is-merged", !!t.flags.isMerged);
 
-      // Move animation via transform
       const x = c * step;
       const y = r * step;
-      el.style.transform = `translate(${x}px, ${y}px)`;
+
+      // Set CSS variables; transform reads these vars.
+      el.style.setProperty("--tx", `${x}px`);
+      el.style.setProperty("--ty", `${y}px`);
 
       el.setAttribute("aria-label", String(t.value));
 
-      // Clear flags after render so it only pops once
       t.flags.isNew = false;
       t.flags.isMerged = false;
     }
   }
 
-  // Remove tiles no longer present
   for (const [id, el] of tileEls.entries()) {
     if (seenIds.has(id)) continue;
     el.remove();
@@ -435,9 +448,6 @@ function render() {
 function move(direction) {
   if (gameOver) return;
 
-  const beforeScore = score;
-
-  // Snapshot to detect changes
   const before = grid.map(row => row.map(t => (t ? t.value : 0)).join(",")).join("|");
 
   let gainedTotal = 0;
@@ -470,7 +480,7 @@ function move(direction) {
   }
 
   const after = newGrid.map(row => row.map(t => (t ? t.value : 0)).join(",")).join("|");
-  if (before === after && gainedTotal === 0 && beforeScore === score) return;
+  if (before === after && gainedTotal === 0) return;
 
   grid = newGrid;
 
@@ -482,6 +492,12 @@ function move(direction) {
 
   spawnRandomTile(grid);
   render();
+
+  // Win message (once)
+  if (!hasWon && hasValueOnBoard(grid, 2048)) {
+    hasWon = true;
+    showOverlay("You Got Rabbi Joel!", "You reached 2048. Click anywhere to keep playing.");
+  }
 
   if (!anyMovesLeft(grid)) {
     gameOver = true;
@@ -499,6 +515,13 @@ function showOverlay(title, msg) {
 function hideOverlay() {
   els.overlay.classList.remove("show");
 }
+
+/* Click overlay to continue only when it's a win (not game over) */
+els.overlay.addEventListener("click", (e) => {
+  if (!els.overlay.classList.contains("show")) return;
+  if (gameOver) return; // keep blocking on game over
+  hideOverlay();
+});
 
 /* ---------- Input ---------- */
 document.addEventListener("keydown", (e) => {
@@ -545,4 +568,3 @@ els.board.addEventListener("touchend", (e) => {
 </script>
 </body>
 </html>
-
